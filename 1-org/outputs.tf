@@ -44,3 +44,14 @@ output "openclaw_workload_secret_key" {
   value       = scaleway_iam_api_key.openclaw.secret_key
   sensitive   = true
 }
+
+output "scheduler_application_id" {
+  description = "Scheduler workload IAM application ID"
+  value       = scaleway_iam_application.scheduler.id
+}
+
+output "scheduler_workload_secret_key" {
+  description = "Scheduler workload API secret key (Instances power off/on)"
+  value       = scaleway_iam_api_key.scheduler.secret_key
+  sensitive   = true
+}

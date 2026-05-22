@@ -29,6 +29,9 @@ terraform.rc
 # Terraform working directories
 .terraform/
 
+# Serverless function build artifacts (archive_file output)
+**/function.zip
+
 # NOTE: .terraform.lock.hcl IS committed (provider version pinning).
 
 # Plan output

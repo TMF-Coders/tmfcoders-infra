@@ -34,3 +34,11 @@ output "odoo_url" {
     var.odoo_domain != "" ? "https://${var.odoo_domain}" : "http://${scaleway_lb_ip.odoo[0].ip_address}"
   ) : null
 }
+
+output "power_schedule" {
+  description = "Active VM power schedule (UTC crons) or null when disabled"
+  value = var.enable_power_schedule ? {
+    power_off_cron = var.power_off_cron
+    power_on_cron  = var.power_on_cron
+  } : null
+}

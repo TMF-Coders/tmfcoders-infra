@@ -146,7 +146,7 @@ jobs:
 
       - uses: terraform-docs/gh-actions@v1.3.0
         with:
-          working-dir: modules/project,modules/network,modules/instance,modules/security-group,modules/tenant
+          working-dir: modules/project,modules/network,modules/instance,modules/security-group,modules/tenant,modules/scheduler
           output-file: README.md
           output-method: inject
           git-push: "false"

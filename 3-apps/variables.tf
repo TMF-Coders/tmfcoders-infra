@@ -102,3 +102,21 @@ variable "enable_odoo_load_balancer" {
   type        = bool
   default     = true
 }
+
+variable "enable_power_schedule" {
+  description = "Power the application VMs off/on on a schedule to save compute cost"
+  type        = bool
+  default     = true
+}
+
+variable "power_off_cron" {
+  description = "UTC cron for powering VMs off (default 01:00 CET = 00:00 UTC)"
+  type        = string
+  default     = "0 0 * * *"
+}
+
+variable "power_on_cron" {
+  description = "UTC cron for powering VMs on (default 09:00 CET = 08:00 UTC)"
+  type        = string
+  default     = "0 8 * * *"
+}

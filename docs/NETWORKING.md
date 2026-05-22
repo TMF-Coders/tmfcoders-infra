@@ -12,7 +12,7 @@ Tenant Project
     │     └── OpenClaw VM (Matriz)
     │
     ├── Private Network: <tenant>-<env>-apps     10.10.20.0/24
-    │     ├── Odoo 17 VM (Filial)
+    │     ├── Odoo 19 VM (Filial)
     │     └── Managed PostgreSQL (IPAM-attached)
     │
     └── Public Gateway: <tenant>-<env>-gateway

@@ -28,7 +28,7 @@ so a Project per tenant gives a native cost breakdown for chargeback.
 | `tenant-provisioning` | home Organization | Creates Project-mode tenant projects |
 | `1-org` | per tenant/env | Security groups, workload IAM, Secret Manager |
 | `2-network` | per tenant/env | VPC v2, private networks, Public Gateway + bastion |
-| `3-apps` | per tenant/env | OpenClaw + Odoo 17 VMs, Managed PostgreSQL, Load Balancer |
+| `3-apps` | per tenant/env | OpenClaw + Odoo 19 VMs, Managed PostgreSQL, Load Balancer |
 | `4-observability` | per tenant/env | Cockpit logs/metrics/alerts, immutable audit archive |
 
 `1-org`..`4-observability` are single canonical roots. A deployment =
@@ -113,6 +113,7 @@ terraform-docs and infracost on every PR.
 | [DIRECTORY_STRUCTURE.md](DIRECTORY_STRUCTURE.md) | Annotated repository layout |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Workflow and conventions |
 | [docs/BILLING.md](docs/BILLING.md) | Cost segmentation and rebilling |
+| [docs/MIGRATION.md](docs/MIGRATION.md) | Migrating the existing deployment into the landing zone |
 | [docs/IAM.md](docs/IAM.md) | Identities, policies, permission sets |
 | [docs/NETWORKING.md](docs/NETWORKING.md) | Topology, address plan, bastion |
 | [docs/SECURITY.md](docs/SECURITY.md) | Controls, threat model, hardening |
