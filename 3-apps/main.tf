@@ -82,7 +82,7 @@ resource "scaleway_rdb_instance" "odoo" {
   password  = random_password.odoo_db.result
 
   volume_type       = "bssd"
-  volume_size_in_gb = 50
+  volume_size_in_gb = var.rdb_volume_size_gb
 
   disable_backup            = false
   backup_schedule_frequency = 24
@@ -106,6 +106,7 @@ resource "scaleway_rdb_database" "odoo" {
 # VM 1: OpenClaw (Matriz)
 #───────────────────────────────────────────────
 module "openclaw" {
+  count  = var.enable_openclaw ? 1 : 0
   source = "../modules/instance"
 
   instance_name     = "${local.name_prefix}-openclaw-001"
@@ -237,11 +238,14 @@ module "scheduler" {
   count  = var.enable_power_schedule ? 1 : 0
   source = "../modules/scheduler"
 
-  name_prefix    = local.name_prefix
-  project_id     = var.project_id
-  region         = var.region
-  zone           = var.zone
-  server_ids     = [module.odoo.instance_id, module.openclaw.instance_id]
+  name_prefix = local.name_prefix
+  project_id  = var.project_id
+  region      = var.region
+  zone        = var.zone
+  server_ids = concat(
+    [module.odoo.instance_id],
+    var.enable_openclaw ? [module.openclaw[0].instance_id] : [],
+  )
   scw_secret_key = data.terraform_remote_state.org.outputs.scheduler_workload_secret_key
   power_off_cron = var.power_off_cron
   power_on_cron  = var.power_on_cron

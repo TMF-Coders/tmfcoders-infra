@@ -1,6 +1,6 @@
 output "openclaw_instance_id" {
-  description = "OpenClaw instance ID"
-  value       = module.openclaw.instance_id
+  description = "OpenClaw instance ID (null when OpenClaw is disabled)"
+  value       = var.enable_openclaw ? module.openclaw[0].instance_id : null
 }
 
 output "odoo_instance_id" {

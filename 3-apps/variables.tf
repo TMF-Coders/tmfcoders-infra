@@ -61,6 +61,12 @@ variable "state_bucket" {
   type        = string
 }
 
+variable "enable_openclaw" {
+  description = "Deploy the OpenClaw VM"
+  type        = bool
+  default     = true
+}
+
 variable "openclaw_instance_type" {
   description = "Instance type for the OpenClaw VM"
   type        = string
@@ -89,6 +95,17 @@ variable "rdb_backup_retention_days" {
   description = "Managed PostgreSQL automated backup retention in days"
   type        = number
   default     = 30
+}
+
+variable "rdb_volume_size_gb" {
+  description = "Managed PostgreSQL volume size in GB"
+  type        = number
+  default     = 50
+
+  validation {
+    condition     = var.rdb_volume_size_gb >= 5 && var.rdb_volume_size_gb <= 10000
+    error_message = "rdb_volume_size_gb must be between 5 and 10000."
+  }
 }
 
 variable "odoo_domain" {
