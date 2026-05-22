@@ -1,168 +1,98 @@
-# Makefile for TMF Coders Infrastructure
-# Facilitates management of Terraform across multiple layers
+# Makefile - TMF Coders Infrastructure (Scaleway, multi-tenant)
+# Landing zone + per-tenant layered Terraform.
 
-.PHONY: help init-all plan-all apply-all bootstrap org-prod network-prod apps-prod
+.PHONY: help fmt validate lint security check \
+        bootstrap-init bootstrap-apply bootstrap-migrate \
+        tp-init tp-apply tp-output \
+        tenant-init tenant-plan tenant-apply tenant-destroy tenant-output \
+        tenant-apply-all rebill clean
 
-# Variables
-ENV ?= prod
-LAYER ?= all
+TENANT ?= tmf-internal
+ENV    ?= prod
+LAYER  ?= 1-org
+
+ALL_LAYERS  := 1-org 2-network 3-apps 4-observability
+ROOT_DIRS   := 0-bootstrap tenant-provisioning $(ALL_LAYERS)
+TVARS_DIR    = $(PWD)/tenants/$(TENANT)/$(ENV)
 
 help: ## Show this help
-	@echo "TMF Coders - Infrastructure Management"
+	@echo "TMF Coders - Infrastructure (Scaleway, multi-tenant)"
 	@echo ""
-	@echo "Usage: make [target]"
+	@echo "Usage: make <target> [TENANT=<t>] [ENV=dev|prod] [LAYER=<layer>]"
 	@echo ""
-	@echo "Available targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-init-all: ## Initialize all layers (by environment)
-	@echo "Initializing all layers for $(ENV)..."
-	@make -C 0-bootstrap init
-	@make -C 1-org/$(ENV) init
-	@make -C 2-network/$(ENV) init
-	@make -C 3-apps/$(ENV) init
-	@make -C 4-observability/$(ENV) init
-
-# Bootstrap
-bootstrap-init: ## Init bootstrap layer
-	cd 0-bootstrap && terraform init
-
-bootstrap-plan: ## Plan bootstrap layer
-	cd 0-bootstrap && terraform plan
-
-bootstrap-apply: ## Apply bootstrap layer
-	cd 0-bootstrap && terraform apply
-
-bootstrap-destroy: ## Destroy bootstrap (CAUTION)
-	cd 0-bootstrap && terraform destroy
-
-# Organization
-org-init: ## Init org layer
-	cd 1-org/$(ENV) && terraform init
-
-org-plan: ## Plan org layer
-	cd 1-org/$(ENV) && terraform plan
-
-org-apply: ## Apply org layer
-	cd 1-org/$(ENV) && terraform apply
-
-org-output: ## Show org outputs
-	cd 1-org/$(ENV) && terraform output
-
-# Network
-network-init: ## Init network layer
-	cd 2-network/$(ENV) && terraform init
-
-network-plan: ## Plan network layer
-	cd 2-network/$(ENV) && terraform plan
-
-network-apply: ## Apply network layer
-	cd 2-network/$(ENV) && terraform apply
-
-network-output: ## Show network outputs
-	cd 2-network/$(ENV) && terraform output
-
-# Apps
-apps-init: ## Init apps layer
-	cd 3-apps/$(ENV) && terraform init
-
-apps-plan: ## Plan apps layer
-	cd 3-apps/$(ENV) && terraform plan
-
-apps-apply: ## Apply apps layer
-	cd 3-apps/$(ENV) && terraform apply
-
-apps-output: ## Show apps outputs
-	cd 3-apps/$(ENV) && terraform output
-
-apps-destroy: ## Destroy apps (CAUTION)
-	cd 3-apps/$(ENV) && terraform destroy
-
-# Observability
-obs-init: ## Init observability layer
-	cd 4-observability/$(ENV) && terraform init
-
-obs-plan: ## Plan observability layer
-	cd 4-observability/$(ENV) && terraform plan
-
-obs-apply: ## Apply observability layer
-	cd 4-observability/$(ENV) && terraform apply
-
-obs-output: ## Show observability outputs
-	cd 4-observability/$(ENV) && terraform output
-
-# Combined commands
-plan-all: ## Plan all layers
-	@make org-plan ENV=$(ENV)
-	@make network-plan ENV=$(ENV)
-	@make apps-plan ENV=$(ENV)
-	@make obs-plan ENV=$(ENV)
-
-apply-all: ## Apply all layers
-	@make org-apply ENV=$(ENV)
-	@make network-apply ENV=$(ENV)
-	@make apps-apply ENV=$(ENV)
-	@make obs-apply ENV=$(ENV)
-
-output-all: ## Show all outputs
-	@echo "=== Organization ==="
-	@make org-output ENV=$(ENV)
-	@echo ""
-	@echo "=== Network ==="
-	@make network-output ENV=$(ENV)
-	@echo ""
-	@echo "=== Apps ==="
-	@make apps-output ENV=$(ENV)
-	@echo ""
-	@echo "=== Observability ==="
-	@make obs-output ENV=$(ENV)
-
-# Validation and formatting
-validate: ## Validate Terraform syntax
-	@echo "Validating syntax..."
-	@for dir in 0-bootstrap 1-org/$(ENV) 2-network/$(ENV) 3-apps/$(ENV) 4-observability/$(ENV); do \
-		echo "Validating $$dir..."; \
-		cd $$dir && terraform validate && cd ..; \
-	done
-
-fmt: ## Format Terraform code
-	@echo "Formatting code..."
+# ── Quality gate ────────────────────────────────────────────
+fmt: ## Format all Terraform code
 	terraform fmt -recursive .
 
-# State management
-state-list: ## List resources in state
-	cd 3-apps/$(ENV) && terraform state list
+validate: ## Validate every root (no backend)
+	@for d in $(ROOT_DIRS); do \
+		echo "validate $$d"; \
+		terraform -chdir=$$d init -backend=false >/dev/null && \
+		terraform -chdir=$$d validate || exit 1; \
+	done
 
-# SSH connections (Note: Scaleway doesn't have IAP - use bastion or VPN)
-ssh-openclaw: ## Connect to OpenClaw VM
-	@echo "OpenClaw SSH: Use private IP via bastion or VPN"
-	@cd 3-apps/$(ENV) && terraform output ssh_command_openclaw
+lint: ## Run tflint across the repo
+	tflint --init
+	tflint --recursive --config="$(PWD)/.tflint.hcl"
 
-ssh-odoo: ## Connect to Odoo VM
-	@echo "Odoo SSH: Use private IP via bastion or VPN"
-	@cd 3-apps/$(ENV) && terraform output ssh_command_odoo
+security: ## Run tfsec
+	tfsec . --config-file .tfsec.yml --minimum-severity HIGH
 
-# Deployment shortcuts
-deploy-prod: ## Deploy full production environment
-	@echo "Deploying production environment..."
-	@make bootstrap-apply
-	@make org-apply ENV=prod
-	@make network-apply ENV=prod
-	@make apps-apply ENV=prod
-	@make obs-apply ENV=prod
-	@echo "Deployment complete!"
+check: fmt validate lint security ## Run the full local quality gate
 
-deploy-dev: ## Deploy full development environment
-	@echo "Deploying development environment..."
-	@make org-apply ENV=dev
-	@make network-apply ENV=dev
-	@make apps-apply ENV=dev
-	@make obs-apply ENV=dev
-	@echo "Deployment complete!"
+# ── Landing zone (run once per Organization) ────────────────
+bootstrap-init: ## Init landing-zone bootstrap on local state
+	terraform -chdir=0-bootstrap init
 
-# Cleanup
-clean: ## Clean temporary files
-	find . -type d -name ".terraform" -exec rm -rf {} +
-	find . -type f -name ".terraform.lock.hcl" -delete
-	find . -type f -name "*.tfstate.backup" -delete
-	@echo "Cleanup complete"
+bootstrap-apply: ## Apply landing zone (state bucket + CI IAM + platform project)
+	terraform -chdir=0-bootstrap apply
+
+bootstrap-migrate: ## Migrate bootstrap state into the remote bucket
+	terraform -chdir=0-bootstrap init -migrate-state -backend-config=backend.hcl
+
+# ── Tenant provisioning (Project-mode tenant projects) ──────
+tp-init: ## Init tenant-provisioning
+	terraform -chdir=tenant-provisioning init -backend-config=backend.hcl
+
+tp-apply: ## Create/update Project-mode tenant projects
+	terraform -chdir=tenant-provisioning apply
+
+tp-output: ## Show tenant project IDs
+	terraform -chdir=tenant-provisioning output
+
+# ── Per-tenant layer operations ─────────────────────────────
+# Backend + var-file are selected from tenants/<TENANT>/<ENV>/<LAYER>.*
+tenant-init: ## Init a layer for a tenant (TENANT, ENV, LAYER)
+	terraform -chdir=$(LAYER) init -reconfigure \
+		-backend-config=$(TVARS_DIR)/$(LAYER).backend.hcl
+
+tenant-plan: ## Plan a layer for a tenant (TENANT, ENV, LAYER)
+	terraform -chdir=$(LAYER) plan -var-file=$(TVARS_DIR)/$(LAYER).tfvars
+
+tenant-apply: ## Apply a layer for a tenant (TENANT, ENV, LAYER)
+	terraform -chdir=$(LAYER) apply -var-file=$(TVARS_DIR)/$(LAYER).tfvars
+
+tenant-destroy: ## Destroy a layer for a tenant (TENANT, ENV, LAYER)
+	terraform -chdir=$(LAYER) destroy -var-file=$(TVARS_DIR)/$(LAYER).tfvars
+
+tenant-output: ## Show outputs of a layer for a tenant (TENANT, ENV, LAYER)
+	terraform -chdir=$(LAYER) output
+
+tenant-apply-all: ## Init+apply every layer for a tenant, in order (TENANT, ENV)
+	@for l in $(ALL_LAYERS); do \
+		echo "=== $(TENANT)/$(ENV) :: $$l ==="; \
+		terraform -chdir=$$l init -reconfigure -backend-config=$(TVARS_DIR)/$$l.backend.hcl && \
+		terraform -chdir=$$l apply -auto-approve -var-file=$(TVARS_DIR)/$$l.tfvars || exit 1; \
+	done
+
+# ── Billing ─────────────────────────────────────────────────
+rebill: ## Generate the monthly per-tenant cost report
+	bash scripts/rebill.sh
+
+clean: ## Remove local Terraform caches
+	find . -type d -name ".terraform" | xargs -r rm -rf
+	find . -type f -name "*.tfplan" -delete
+	@echo "clean done"

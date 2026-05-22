@@ -1,69 +1,95 @@
 /**
- * Bootstrap Layer - Scaleway
- * Creates API keys and initial configuration
- * Scaleway uses API keys instead of service accounts
+ * Bootstrap Layer - Scaleway Landing Zone
+ * Run ONCE per Organization. Creates the shared foundation:
+ *   - the platform (landing-zone) Project - shared, non-client-billable
+ *   - the Object Storage bucket holding remote Terraform state
+ *   - the IAM application + Organization-wide policy used by the CI pipeline
+ *
+ * For Org-mode tenants, run this layer again against that Organization's
+ * credentials. Project-mode tenants get their Projects from tenant-provisioning.
+ *
+ * Runs on local state, then migrates to the bucket it just created.
+ * See: versions.tf, providers.tf, backend.hcl.example
  */
 
-terraform {
-  required_version = ">= 1.5"
-  required_providers {
-    scaleway = {
-      source  = "scaleway/scaleway"
-      version = "~> 2.0"
-    }
-  }
-
-  backend "s3" {
-    bucket = "tmfcoders-terraform-state"
-    key    = "bootstrap/terraform.tfstate"
-    region = "fr-par" # Paris (EU)
-    endpoint = "s3.fr-par.scw.cloud"
-    
-    # Scaleway S3 credentials via environment variables:
-    # export AWS_ACCESS_KEY_ID="SCWXXXXXXXXXXXXXX"
-    # export AWS_SECRET_ACCESS_KEY="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    # export AWS_DEFAULT_REGION="fr-par"
-  }
-}
-
-provider "scaleway" {}
-
 locals {
-  environment = "bootstrap"
-  region      = "fr-par" # Paris (GDPR - EU)
-  
-  common_labels = {
-    environment  = local.environment
+  # Landing-zone resources are shared overhead, not billable to any tenant.
+  common_tags = {
+    environment  = "landing-zone"
+    tenant       = "platform"
+    cost_center  = "platform"
+    billable     = "false"
     managed_by   = "terraform"
     organization = "tmfcoders"
   }
 }
 
-# Create a project (equivalent to GCP project)
-module "project_tmfcoders" {
-  source = "../../modules/project"
+#───────────────────────────────────────────────
+# Platform (landing-zone) project
+#───────────────────────────────────────────────
+module "project" {
+  source = "../modules/project"
 
-  project_name = "TMF Coders - Infrastructure"
-  description  = "Main project for TMF Coders infrastructure"
+  project_name = var.project_name
+  description  = "TMF Coders - landing-zone / platform project (shared foundation)"
 }
 
-# Outputs
-output "project_id" {
-  description = "Project ID"
-  value       = module.project_tmfcoders.project_id
+#───────────────────────────────────────────────
+# Remote state bucket (versioned, private)
+#───────────────────────────────────────────────
+resource "scaleway_object_bucket" "state" {
+  name       = "${var.state_bucket_name}-${var.state_bucket_suffix}"
+  project_id = module.project.project_id
+  region     = var.region
+  tags       = local.common_tags
+
+  # Versioning protects state against corruption and accidental deletion.
+  versioning {
+    enabled = true
+  }
 }
 
-output "api_key_instructions" {
-  description = "How to get API credentials"
-  value       = <<-EOT
-    To get Scaleway API credentials:
-    1. Go to: https://console.scaleway.com/iam/api-keys
-    2. Create a new API key
-    3. Set environment variables:
-       export SCW_ACCESS_KEY="SCWXXXXXXXXXXXXXX"
-       export SCW_SECRET_KEY="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-       export SCW_DEFAULT_PROJECT_ID="${module.project_tmfcoders.project_id}"
-       export SCW_DEFAULT_REGION="fr-par"
-       export SCW_DEFAULT_ZONE="fr-par-1"
-    EOT
+# Block all public access to the state bucket.
+resource "scaleway_object_bucket_acl" "state" {
+  bucket = scaleway_object_bucket.state.name
+  acl    = "private"
+}
+
+#───────────────────────────────────────────────
+# CI/CD IAM application (Organization-wide - deploys every tenant)
+#───────────────────────────────────────────────
+resource "scaleway_iam_application" "terraform_ci" {
+  name        = "tmfcoders-terraform-ci"
+  description = "Service identity used by the GitHub Actions Terraform pipeline"
+}
+
+resource "scaleway_iam_policy" "terraform_ci" {
+  name           = "tmfcoders-terraform-ci-policy"
+  description    = "Permissions for the Terraform CI pipeline across all tenant projects"
+  application_id = scaleway_iam_application.terraform_ci.id
+
+  rule {
+    # Org-wide: the pipeline must reach every Project-mode tenant project.
+    organization_id = module.project.organization_id
+    permission_set_names = [
+      "InstancesFullAccess",
+      "PrivateNetworksReadWrite",
+      "VPCFullAccess",
+      "ObjectStorageFullAccess",
+      "SecretManagerFullAccess",
+      "RelationalDatabasesFullAccess",
+      "LoadBalancersFullAccess",
+      "ObservabilityFullAccess",
+      "ProjectManager",
+      "IAMManager",
+    ]
+  }
+}
+
+# API key for the CI application. The secret is shown once - store it in the
+# GitHub repository secrets and never commit it.
+resource "scaleway_iam_api_key" "terraform_ci" {
+  application_id     = scaleway_iam_application.terraform_ci.id
+  description        = "GitHub Actions Terraform CI key"
+  default_project_id = module.project.project_id
 }

@@ -1,23 +1,39 @@
 variable "instance_name" {
-  description = "Name of the instance"
-  type        = string;
+  description = "Name of the instance (lowercase, RFC1035-style)"
+  type        = string
+
+  validation {
+    condition     = can(regex("^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$", var.instance_name))
+    error_message = "instance_name must be lowercase alphanumeric with hyphens."
+  }
 }
 
 variable "instance_type" {
-  description = "Instance type (e.g., DEV1-S, GP1-M)"
-  type        = string;
-  default     = "DEV1-S"
+  description = "Scaleway commercial instance type (e.g. PLAY2-NANO, PRO2-S)"
+  type        = string
+  default     = "PRO2-S"
 }
 
-variable "image_id" {
-  description = "Image ID (Ubuntu, Debian, etc.)"
-  type        = string;
-  default     = "ubuntu_jammy" # Ubuntu 22.04 LTS
+variable "image_label" {
+  description = "Marketplace image label (e.g. ubuntu_jammy, ubuntu_noble)"
+  type        = string
+  default     = "ubuntu_noble"
+}
+
+variable "zone" {
+  description = "Scaleway zone"
+  type        = string
+  default     = "fr-par-1"
+}
+
+variable "project_id" {
+  description = "Scaleway project ID"
+  type        = string
 }
 
 variable "security_group_id" {
-  description = "Security group ID"
-  type        = string;
+  description = "Security group ID applied to the instance"
+  type        = string
 }
 
 variable "tags" {
@@ -28,39 +44,46 @@ variable "tags" {
 
 variable "root_volume_size" {
   description = "Root volume size in GB"
-  type        = number;
-  default     = 20;
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.root_volume_size >= 10 && var.root_volume_size <= 1000
+    error_message = "root_volume_size must be between 10 and 1000 GB."
+  }
 }
 
 variable "root_volume_type" {
-  description = "Root volume type (l, sc, bssd)"
-  type        = string;
-  default     = "bssd" # Balanced SSD 
+  description = "Root volume type (sbs_volume, b_ssd, l_ssd)"
+  type        = string
+  default     = "sbs_volume"
+
+  validation {
+    condition     = contains(["sbs_volume", "b_ssd", "l_ssd"], var.root_volume_type)
+    error_message = "root_volume_type must be one of: sbs_volume, b_ssd, l_ssd."
+  }
 }
 
-variable "addtional_volume_ids" {
-  description = "Additional volume IDs to attach"
+variable "additional_volume_ids" {
+  description = "Additional block volume IDs to attach"
   type        = list(string)
   default     = []
 }
 
-variable "private_networks" {
-  description = "Private networks to attach"
-  type = list(object({
-    pn_id  = string;
-    pnic_id = string;
-  }))
-  default = []
+variable "private_network_ids" {
+  description = "List of private network IDs to attach the instance to"
+  type        = list(string)
+  default     = []
 }
 
 variable "assign_public_ip" {
-  description = "Assign public IP (NOT RECOMMENDED for PROD)"
-  type        = bool;
-  default     = false;
+  description = "Attach a routed public IP (discouraged in production - use a Load Balancer)"
+  type        = bool
+  default     = false
 }
 
-variable "user_data" {
-  description = "User data / startup script"
-  type        = string;
-  default     = null;
+variable "cloud_init" {
+  description = "cloud-init user data script"
+  type        = string
+  default     = ""
 }
