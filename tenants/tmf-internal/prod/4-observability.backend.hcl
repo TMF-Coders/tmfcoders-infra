@@ -1,4 +1,4 @@
-bucket   = "tmfcoders-terraform-state-CHANGEME"
+bucket   = "tmfcoders-terraform-state-a2b56"
 key      = "tenants/tmf-internal/4-observability/prod/terraform.tfstate"
 region   = "fr-par"
 endpoint = "s3.fr-par.scw.cloud"

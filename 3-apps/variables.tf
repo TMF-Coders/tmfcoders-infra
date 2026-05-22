@@ -61,6 +61,12 @@ variable "state_bucket" {
   type        = string
 }
 
+variable "enable_openclaw" {
+  description = "Deploy the OpenClaw VM"
+  type        = bool
+  default     = true
+}
+
 variable "openclaw_instance_type" {
   description = "Instance type for the OpenClaw VM"
   type        = string
@@ -91,6 +97,17 @@ variable "rdb_backup_retention_days" {
   default     = 30
 }
 
+variable "rdb_volume_size_gb" {
+  description = "Managed PostgreSQL volume size in GB"
+  type        = number
+  default     = 50
+
+  validation {
+    condition     = var.rdb_volume_size_gb >= 5 && var.rdb_volume_size_gb <= 10000
+    error_message = "rdb_volume_size_gb must be between 5 and 10000."
+  }
+}
+
 variable "odoo_domain" {
   description = "Public DNS name for the Odoo Load Balancer TLS certificate"
   type        = string
@@ -101,4 +118,22 @@ variable "enable_odoo_load_balancer" {
   description = "Provision a public HTTPS Load Balancer in front of Odoo"
   type        = bool
   default     = true
+}
+
+variable "enable_power_schedule" {
+  description = "Power the application VMs off/on on a schedule to save compute cost"
+  type        = bool
+  default     = true
+}
+
+variable "power_off_cron" {
+  description = "UTC cron for powering VMs off (default 01:00 CET = 00:00 UTC)"
+  type        = string
+  default     = "0 0 * * *"
+}
+
+variable "power_on_cron" {
+  description = "UTC cron for powering VMs on (default 09:00 CET = 08:00 UTC)"
+  type        = string
+  default     = "0 8 * * *"
 }

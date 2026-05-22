@@ -5,10 +5,12 @@ Per-tenant application workloads. Deployed once per *(tenant, environment)*.
 ## Purpose
 
 - **OpenClaw VM** (Matriz) — private-only, on the `tmf` network.
-- **Odoo 17 VM** (Filial) — private-only, on the `apps` network.
+- **Odoo 19 VM** (Filial) — private-only, on the `apps` network.
 - **Managed PostgreSQL** (`scaleway_rdb_instance`) — HA in prod, automated
   backups, attached to the `apps` private network via IPAM.
 - **HTTPS Load Balancer** — the only public ingress to Odoo (optional).
+- **Power scheduler** — a Serverless Function powers both VMs off/on on a cron
+  (default 01:00-09:00 CET off) to save compute cost (`modules/scheduler`).
 - The Odoo DB password is generated (`random_password`) and stored in Secret
   Manager; cloud-init pulls secrets at boot using the workload IAM key.
 
@@ -38,6 +40,9 @@ make tenant-apply TENANT=<t> ENV=<env> LAYER=3-apps
 | `rdb_backup_retention_days` | Backup retention | `30` |
 | `enable_odoo_load_balancer` | Provision the public LB | `true` |
 | `odoo_domain` | DNS name for the LB TLS cert (empty = HTTP-only) | `""` |
+| `enable_power_schedule` | Power VMs off/on on a schedule | `true` |
+| `power_off_cron` | UTC cron for power off (01:00 CET) | `"0 0 * * *"` |
+| `power_on_cron` | UTC cron for power on (09:00 CET) | `"0 8 * * *"` |
 
 ## Outputs
 
@@ -47,3 +52,4 @@ make tenant-apply TENANT=<t> ENV=<env> LAYER=3-apps
 | `odoo_db_endpoint` / `odoo_db_name` | Managed PostgreSQL endpoint and DB |
 | `odoo_db_password_secret_id` | Secret Manager ID for the DB password |
 | `odoo_load_balancer_ip` / `odoo_url` | Public LB IP and URL |
+| `power_schedule` | Active power-off/on crons (null when disabled) |

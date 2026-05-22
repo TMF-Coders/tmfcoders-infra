@@ -59,3 +59,28 @@ resource "scaleway_iam_api_key" "openclaw" {
   description        = "OpenClaw workload API key (${var.environment})"
   default_project_id = var.project_id
 }
+
+#───────────────────────────────────────────────
+# Scheduler workload identity (VM power off/on)
+#───────────────────────────────────────────────
+resource "scaleway_iam_application" "scheduler" {
+  name        = "${var.tenant}-${var.environment}-scheduler"
+  description = "VM power scheduler workload identity (${var.environment})"
+}
+
+resource "scaleway_iam_policy" "scheduler" {
+  name           = "${var.tenant}-${var.environment}-scheduler-policy"
+  description    = "Scheduler: power instances off/on in the tenant project"
+  application_id = scaleway_iam_application.scheduler.id
+
+  rule {
+    project_ids          = [var.project_id]
+    permission_set_names = ["InstancesFullAccess"]
+  }
+}
+
+resource "scaleway_iam_api_key" "scheduler" {
+  application_id     = scaleway_iam_application.scheduler.id
+  description        = "Scheduler workload API key (${var.environment})"
+  default_project_id = var.project_id
+}

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Odoo 17 bootstrap - connects to Scaleway Managed PostgreSQL.
+# Odoo 19 bootstrap - connects to Scaleway Managed PostgreSQL.
 # Secrets are pulled at boot from Scaleway Secret Manager; none are baked in.
 set -euo pipefail
 exec > >(tee -a /var/log/cloud-init-odoo.log) 2>&1
@@ -40,7 +40,7 @@ rm -f wkhtmltox_0.12.6.1-2.jammy_amd64.deb
 
 useradd -m -U -r -d /opt/odoo -s /bin/bash odoo || true
 mkdir -p /opt/odoo/custom-addons /var/log/odoo
-git clone --depth 1 --branch 17.0 https://github.com/odoo/odoo.git /opt/odoo/odoo-server
+git clone --depth 1 --branch 19.0 https://github.com/odoo/odoo.git /opt/odoo/odoo-server
 python3 -m venv /opt/odoo/venv
 /opt/odoo/venv/bin/pip install --upgrade pip wheel
 /opt/odoo/venv/bin/pip install -r /opt/odoo/odoo-server/requirements.txt
@@ -65,7 +65,7 @@ chmod 640 /etc/odoo.conf
 
 cat > /etc/systemd/system/odoo.service <<EOF
 [Unit]
-Description=Odoo 17 ERP
+Description=Odoo 19 ERP
 After=network-online.target
 Wants=network-online.target
 

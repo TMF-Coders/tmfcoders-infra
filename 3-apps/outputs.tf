@@ -1,6 +1,6 @@
 output "openclaw_instance_id" {
-  description = "OpenClaw instance ID"
-  value       = module.openclaw.instance_id
+  description = "OpenClaw instance ID (null when OpenClaw is disabled)"
+  value       = var.enable_openclaw ? module.openclaw[0].instance_id : null
 }
 
 output "odoo_instance_id" {
@@ -33,4 +33,12 @@ output "odoo_url" {
   value = var.enable_odoo_load_balancer ? (
     var.odoo_domain != "" ? "https://${var.odoo_domain}" : "http://${scaleway_lb_ip.odoo[0].ip_address}"
   ) : null
+}
+
+output "power_schedule" {
+  description = "Active VM power schedule (UTC crons) or null when disabled"
+  value = var.enable_power_schedule ? {
+    power_off_cron = var.power_off_cron
+    power_on_cron  = var.power_on_cron
+  } : null
 }

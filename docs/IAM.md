@@ -11,6 +11,7 @@ used for automation.
 | `tmfcoders-terraform-ci` | `0-bootstrap` | Organization-wide | GitHub Actions Terraform pipeline |
 | `<tenant>-<env>-odoo` | `1-org` | Tenant project | Odoo workload — read secrets, write observability |
 | `<tenant>-<env>-openclaw` | `1-org` | Tenant project | OpenClaw workload — read secrets, write observability |
+| `<tenant>-<env>-scheduler` | `1-org` | Tenant project | VM power scheduler — power instances off/on |
 | `<project>-client-access` | `tenant-provisioning` | Tenant project | Optional delegated client read-only access |
 
 ## Policies / permission sets
@@ -31,11 +32,13 @@ IAMManager
 Scoped to the tenant's own project only:
 
 ```
-SecretManagerSecretAccess   ObservabilityFullAccess
+odoo / openclaw : SecretManagerSecretAccess   ObservabilityFullAccess
+scheduler       : InstancesFullAccess
 ```
 
 The workload key is the minimal credential a VM needs at boot to pull its
-secrets from Secret Manager. Even if leaked from state it only reads that
+secrets from Secret Manager. The scheduler key is consumed by the power
+scheduler Serverless Function to issue instance power off/on actions. Even if leaked from state it only reads that
 tenant's secrets, and it is rotatable.
 
 ### Client delegated access (`modules/tenant`)

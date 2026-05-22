@@ -1,6 +1,6 @@
 /**
  * Apps Layer - Scaleway
- * Deploys OpenClaw (Matriz) and Odoo 17 (Filial). Odoo runs against a
+ * Deploys OpenClaw (Matriz) and Odoo 19 (Filial). Odoo runs against a
  * Managed PostgreSQL cluster and is fronted by an HTTPS Load Balancer.
  * Every VM is private-network-only; secrets are pulled from Secret Manager.
  */
@@ -75,14 +75,14 @@ resource "scaleway_rdb_instance" "odoo" {
   project_id    = var.project_id
   region        = var.region
   node_type     = var.rdb_node_type
-  engine        = "PostgreSQL-15"
+  engine        = "PostgreSQL-16"
   is_ha_cluster = var.rdb_is_ha
 
   user_name = "odoo"
   password  = random_password.odoo_db.result
 
   volume_type       = "bssd"
-  volume_size_in_gb = 50
+  volume_size_in_gb = var.rdb_volume_size_gb
 
   disable_backup            = false
   backup_schedule_frequency = 24
@@ -106,6 +106,7 @@ resource "scaleway_rdb_database" "odoo" {
 # VM 1: OpenClaw (Matriz)
 #───────────────────────────────────────────────
 module "openclaw" {
+  count  = var.enable_openclaw ? 1 : 0
   source = "../modules/instance"
 
   instance_name     = "${local.name_prefix}-openclaw-001"
@@ -123,7 +124,7 @@ module "openclaw" {
 }
 
 #───────────────────────────────────────────────
-# VM 2: Odoo 17 (Filial)
+# VM 2: Odoo 19 (Filial)
 #───────────────────────────────────────────────
 module "odoo" {
   source = "../modules/instance"
@@ -228,4 +229,24 @@ resource "scaleway_lb_frontend" "odoo" {
   inbound_port = var.odoo_domain != "" ? 443 : 80
 
   certificate_ids = var.odoo_domain != "" ? [scaleway_lb_certificate.odoo[0].id] : []
+}
+
+#───────────────────────────────────────────────
+# VM power scheduler (cost saving: VMs off 01:00-09:00 CET)
+#───────────────────────────────────────────────
+module "scheduler" {
+  count  = var.enable_power_schedule ? 1 : 0
+  source = "../modules/scheduler"
+
+  name_prefix = local.name_prefix
+  project_id  = var.project_id
+  region      = var.region
+  zone        = var.zone
+  server_ids = concat(
+    [module.odoo.instance_id],
+    var.enable_openclaw ? [module.openclaw[0].instance_id] : [],
+  )
+  scw_secret_key = data.terraform_remote_state.org.outputs.scheduler_workload_secret_key
+  power_off_cron = var.power_off_cron
+  power_on_cron  = var.power_on_cron
 }
