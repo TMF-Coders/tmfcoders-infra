@@ -20,7 +20,6 @@ locals {
 
   # Private address plan (shared across layers).
   vpc_supernet = "10.10.0.0/16"
-  tmf_subnet   = "10.10.10.0/24"
   apps_subnet  = "10.10.20.0/24"
 }
 
