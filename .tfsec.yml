@@ -1,0 +1,13 @@
+# tfsec configuration - TMF Coders Infrastructure
+# Reference: https://aquasecurity.github.io/tfsec/
+
+# Paths excluded from scanning.
+exclude:
+  - "**/.terraform/**"
+  - "docs/**"
+  - "*.md"
+
+# Accepted risks - document the justification for every entry.
+ignore:
+  - id: scaleway-instance-no-public-ip
+    description: "Bastion-fronted gateway is the only public ingress; VMs are private-only by default"

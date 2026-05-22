@@ -1,0 +1,31 @@
+# gitleaks configuration - TMF Coders Infrastructure
+
+title = "gitleaks - TMF Coders"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id          = "scaleway-access-key"
+description = "Scaleway API access key"
+regex       = '''SCW[A-Z0-9]{17}'''
+tags        = ["key", "scaleway"]
+
+[[rules]]
+id          = "scaleway-secret-key"
+description = "Scaleway API secret key (UUID v4)"
+regex       = '''(?i)(scw_secret_key|secret_key)\s*[:=]\s*['"]?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}['"]?'''
+tags        = ["key", "scaleway"]
+
+[allowlist]
+description = "Allowed paths and patterns"
+regexes = [
+  '''xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx''',
+  '''SCWXXXXXXXXXXXXXXXXX''',
+]
+paths = [
+  '''(.*?)\.tfvars\.example$''',
+  '''(.*?)backend\.hcl(\.example)?$''',
+  '''docs/.*''',
+  '''.*\.md$''',
+]

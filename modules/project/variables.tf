@@ -1,6 +1,11 @@
 variable "project_name" {
-  description = "The name of the Scaleway project"
+  description = "Name of the Scaleway project"
   type        = string
+
+  validation {
+    condition     = length(var.project_name) >= 3 && length(var.project_name) <= 100
+    error_message = "project_name must be between 3 and 100 characters."
+  }
 }
 
 variable "description" {
@@ -9,14 +14,8 @@ variable "description" {
   default     = ""
 }
 
-variable "ssh_key_fingerprints" {
-  description = "List of SSH key fingerprints to add to project"
-  type        = list(string)
-  default     = []
-}
-
-variable "ssh_public_key" {
-  description = "SSH public key content (for default key)"
-  type        = string
-  default     = ""
+variable "ssh_public_keys" {
+  description = "Map of named SSH public keys to register on the project (key = name suffix, value = public key material)"
+  type        = map(string)
+  default     = {}
 }

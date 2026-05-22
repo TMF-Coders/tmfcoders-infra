@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored.
+region = "fr-par"
+zone   = "fr-par-1"
+
+# One entry per Project-mode tenant/environment. Org-mode tenants are NOT
+# listed here - they live in their own Organization.
+tenant_projects = {
+  "tmf-internal-prod" = {
+    tenant       = "tmf-internal"
+    project_name = "tmf-internal-prod"
+    description  = "TMF Coders internal workloads - production"
+  }
+  "acme-prod" = {
+    tenant               = "acme"
+    project_name         = "client-acme-prod"
+    description          = "Client ACME - production (Project-mode)"
+    create_client_access = true
+  }
+}

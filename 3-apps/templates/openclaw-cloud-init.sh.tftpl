@@ -1,0 +1,15 @@
+#!/bin/bash
+# OpenClaw bootstrap - installs build dependencies on a private-only host.
+set -euo pipefail
+exec > >(tee -a /var/log/cloud-init-openclaw.log) 2>&1
+echo "OpenClaw bootstrap started at $(date --iso-8601=seconds)"
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get upgrade -y
+apt-get install -y \
+  git build-essential cmake \
+  libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libsdl2-ttf-dev
+
+mkdir -p /opt/openclaw
+echo "OpenClaw bootstrap finished at $(date --iso-8601=seconds)"

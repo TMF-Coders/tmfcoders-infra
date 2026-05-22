@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored.
+project_name        = "TMF Coders - Infrastructure"
+region              = "fr-par"
+zone                = "fr-par-1"
+state_bucket_name   = "tmfcoders-terraform-state"
+state_bucket_suffix = "changeme" # 3-20 lowercase alphanumeric, globally unique

@@ -1,110 +1,67 @@
 #!/bin/bash
-# Script de inicialización para el repositorio tmfcoders-infra
+# Initialisation helper for tmfcoders-infra (Scaleway, multi-tenant).
+# Verifies prerequisites and scaffolds terraform.tfvars for the shared roots.
+set -euo pipefail
 
-set -e
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 
 echo "========================================="
-echo "TMF Coders - Inicialización"
+echo "TMF Coders - Infrastructure bootstrap"
 echo "========================================="
+
+# ── Prerequisites ───────────────────────────────────────────
+command -v terraform >/dev/null 2>&1 \
+  && echo -e "${GREEN}OK terraform: $(terraform version | head -n1)${NC}" \
+  || { echo -e "${RED}ERROR: terraform not installed (>= 1.10 required)${NC}"; exit 1; }
+
+command -v scw >/dev/null 2>&1 \
+  && echo -e "${GREEN}OK scaleway-cli${NC}" \
+  || echo -e "${YELLOW}WARN: scaleway-cli (scw) not installed - optional${NC}"
+
+command -v jq >/dev/null 2>&1 \
+  && echo -e "${GREEN}OK jq${NC}" \
+  || echo -e "${YELLOW}WARN: jq not installed - needed by scripts/rebill.sh${NC}"
+
+for v in SCW_ACCESS_KEY SCW_SECRET_KEY; do
+  [ -z "${!v:-}" ] && echo -e "${YELLOW}WARN: $v is not exported${NC}"
+done
+
+# ── Scaffold tfvars for the shared roots ────────────────────
 echo ""
+echo "Scaffolding terraform.tfvars for shared roots (existing files kept)..."
+for example in 0-bootstrap/terraform.tfvars.example tenant-provisioning/terraform.tfvars.example; do
+  target="${example%.example}"
+  if [ -f "$target" ]; then
+    echo -e "${YELLOW}skip  $target${NC}"
+  else
+    cp "$example" "$target"
+    echo -e "${GREEN}created  $target${NC}"
+  fi
+done
 
-# Colores
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+cat <<'EOF'
 
-# Verificar prerrequisitos
-echo "Verificando prerrequisitos..."
+Next steps
+----------
+1. Export Scaleway credentials:
+     export SCW_ACCESS_KEY="SCWXXXXXXXXXXXXXXXXX"
+     export SCW_SECRET_KEY="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+     export AWS_ACCESS_KEY_ID="$SCW_ACCESS_KEY"        # S3 backend
+     export AWS_SECRET_ACCESS_KEY="$SCW_SECRET_KEY"    # S3 backend
 
-# Terraform
-if ! command -v terraform &> /dev/null; then
-    echo -e "${RED}ERROR: Terraform no está instalado${NC}"
-    echo "Instala Terraform desde: https://www.terraform.io/downloads"
-    exit 1
-fi
-echo -e "${GREEN}✓ Terraform instalado: $(terraform version | head -n1)${NC}"
+2. Landing zone (once per Organization):
+     make bootstrap-apply
+     # copy state bucket name into every backend.hcl, then:
+     make bootstrap-migrate
 
-# Scaleway CLI
-if ! command -v scw &> /dev/null; then
-    echo -e "${YELLOW}ADVERTENCIA: Scaleway CLI no está instalado${NC}"
-    echo "Instala scw desde: https://www.scaleway.com/en/docs/console/cli/"
-    echo "O configura las variables de entorno: SCW_ACCESS_KEY, SCW_SECRET_KEY, etc."
-else
-    echo -e "${GREEN}✓ Scaleway CLI instalado${NC}"
-fi
+3. Create Project-mode tenant projects:
+     # edit tenant-provisioning/terraform.tfvars
+     make tp-init && make tp-apply && make tp-output
 
-echo ""
-echo "========================================="
-echo "Configuración Inicial"
-echo "========================================="
-echo ""
+4. Scaffold and deploy a tenant:
+     scripts/new-tenant.sh <tenant> prod project <cost-center> \
+       <project_id> <state_bucket> <suffix> <alert_email>
+     make tenant-apply-all TENANT=<tenant> ENV=prod
 
-# Solicitar información
-read -p "Ingresa tu Project ID de Scaleway: " PROJECT_ID
-read -p "Ingresa la región (ej: fr-par): " REGION
-read -p "Ingresa la zona (ej: fr-par-1): " ZONE
-read -p "Ingresa el sufijo para el bucket de estado: " BUCKET_SUFFIX
-
-echo ""
-echo "Creando archivos de configuración..."
-
-# 0-bootstrap
-cat > 0-bootstrap/terraform.tfvars << EOF
-project_name = "TMF Coders - Infrastructure"
-region       = "${REGION}"
-bucket_suffix = "${BUCKET_SUFFIX}"
+See RUNBOOK.md for the full procedure and docs/BILLING.md for cost segmentation.
 EOF
-echo -e "${GREEN}✓ Creado: 0-bootstrap/terraform.tfvars${NC}"
-
-# 1-org/prod
-cat > 1-org/prod/terraform.tfvars << EOF
-project_name = "TMF Coders - PROD"
-region       = "${REGION}"
-zone         = "${ZONE}"
-EOF
-echo -e "${GREEN}✓ Creado: 1-org/prod/terraform.tfvars${NC}"
-
-# 2-network/prod
-cat > 2-network/prod/terraform.tfvars << EOF
-tmf_network_id  = "tmf-private-network-prod"
-apps_network_id = "tmf-apps-prod"
-nat_gateway_id  = "tmf-nat-gateway-prod"
-EOF
-echo -e "${GREEN}✓ Creado: 2-network/prod/terraform.tfvars${NC}"
-
-# 3-apps/prod
-cat > 3-apps/prod/terraform.tfvars << EOF
-tmf_network_id  = "tmf-private-network-prod"
-tmf_pnic_id     = "pn-xxxxxxxxxxxx"  # Update with real PNIC ID
-apps_network_id = "tmf-apps-prod"
-apps_pnic_id    = "pn-xxxxxxxxxxxx"  # Update with real PNIC ID
-assign_public_ip = false  # Recommended for production
-EOF
-echo -e "${GREEN}✓ Creado: 3-apps/prod/terraform.tfvars${NC}"
-
-# 4-observability/prod
-cat > 4-observability/prod/terraform.tfvars << EOF
-project_id    = "${PROJECT_ID}"
-region        = "${REGION}"
-retention_days = 730  # 2 years for GDPR
-EOF
-echo -e "${GREEN}✓ Creado: 4-observability/prod/terraform.tfvars${NC}"
-
-echo ""
-echo "========================================="
-echo "Siguiente Paso: Bootstrap"
-echo "========================================="
-echo ""
-echo "Ejecuta los siguientes comandos:"
-echo ""
-echo "  cd 0-bootstrap"
-echo "  terraform init"
-echo "  terraform plan"
-echo "  terraform apply"
-echo ""
-echo "Después de aplicar, anota el Project ID del output y actualiza"
-echo "las referencias en los archivos backend.tf de las demás capas."
-echo ""
-echo -e "${YELLOW}IMPORTANTE: Revisa el README.md para la guía completa de despliegue${NC}"
-echo ""

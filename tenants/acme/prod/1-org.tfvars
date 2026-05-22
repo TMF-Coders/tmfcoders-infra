@@ -1,0 +1,10 @@
+# Tenant: acme / Environment: prod / Layer: 1-org
+environment  = "prod"
+tenant       = "acme"
+cost_center  = "client-acme"
+billing_mode = "project"
+project_id   = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+region       = "fr-par"
+zone         = "fr-par-1"
+
+openclaw_api_key = ""

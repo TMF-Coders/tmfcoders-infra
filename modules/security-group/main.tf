@@ -1,51 +1,38 @@
 /**
- * Security Group Module for Scaleway
- * Equivalent to GCP IAM - Controls access to resources
+ * Security Group Module - Scaleway
+ * Stateful instance firewall. Default-deny inbound, explicit-allow rules.
+ * Equivalent in spirit to a GCP firewall ruleset scoped to instances.
  */
 
-resource "scaleway_instance_security_group" "default" {
-  name              = var.security_group_name
-  description       = var.description
+resource "scaleway_instance_security_group" "this" {
+  name                    = var.security_group_name
+  description             = var.description
+  project_id              = var.project_id
   inbound_default_policy  = var.inbound_default_policy
   outbound_default_policy = var.outbound_default_policy
-  
-  # SSH access (via private network or bastion)
-  dynamic "inbound_rule" {
-    for_each = var.allow_ssh ? [1] : []
-    content {
-      action = "accept"
-      port   = 22
-      ip     = var.ssh_source_ip
-    }
-  }
-  
-  # HTTP/HTTPS
-  dynamic "inbound_rule" {
-    for_each = var.allow_web ? [1] : []
-    content {
-      action = "accept"
-      port   = "80,443"
-      ip     = "0.0.0.0/0" # Restrict in production!
-    }
-  }
-  
-  # Custom rules
+  stateful                = true
+
   dynamic "inbound_rule" {
     for_each = var.inbound_rules
     content {
-      action = inbound_rule.value.action
-      port   = lookup(inbound_rule.value, "port", null)
-      ip     = lookup(inbound_rule.value, "ip", null)
+      action     = inbound_rule.value.action
+      protocol   = inbound_rule.value.protocol
+      port       = inbound_rule.value.port
+      port_range = inbound_rule.value.port_range
+      ip_range   = inbound_rule.value.ip_range
     }
   }
-  
-  # Outbound: Allow all by default (we use NAT gateway)
+
   dynamic "outbound_rule" {
     for_each = var.outbound_rules
     content {
-      action = outbound_rule.value.action
-      port   = lookup(outbound_rule.value, "port", null)
-      ip     = lookup(outbound_rule.value, "ip", null)
+      action     = outbound_rule.value.action
+      protocol   = outbound_rule.value.protocol
+      port       = outbound_rule.value.port
+      port_range = outbound_rule.value.port_range
+      ip_range   = outbound_rule.value.ip_range
     }
   }
+
+  tags = var.tags
 }

@@ -1,16 +1,20 @@
-# Terraform files
+# Terraform state
 *.tfstate
 *.tfstate.*
 *.tfstate.backup
 
-# Terraform lock file
-.terraform.lock.hcl
-.terraform/
+# Crash logs
+crash.log
+crash.*.log
 
-# Variable files with sensitive data
+# Variable files (may contain sensitive data)
 *.tfvars
-!*example.tfvars
+!*.tfvars.example
 terraform.tfvars.json
+
+# Tenant config (.tfvars) carries no secrets - it IS the tenant inventory.
+# Secrets are always generated and stored in Secret Manager, never here.
+!tenants/**/*.tfvars
 
 # Override files
 override.tf
@@ -18,52 +22,48 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
-# CLI configuration
+# Terraform CLI configuration
 .terraformrc
 terraform.rc
 
-# Scaleway credentials (DO NOT COMMIT!)
-*.json
-!*.example.json
-scw-key-*.json
+# Terraform working directories
+.terraform/
 
-# Environment variables
+# NOTE: .terraform.lock.hcl IS committed (provider version pinning).
+
+# Plan output
+*.tfplan
+*.tfplan.json
+
+# Local environment
 .env
 .env.local
 .scaleway/
+.scw/
+scw-cli.ini
 
-# IDE and editor files
+# Claude Code session/worktree metadata
+.claude/
+
+# IDE / editor
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
-
-# Logs
-*.log
-logs/
-
-# Temporary files
-*.tmp
-*.bak
-temp/
-tmp/
-
-# OS files
-.DS_Store
 Thumbs.db
 
-# Backup files
-*.backup
+# Backups
 *.bak
+*.backup
+*.tmp
 
-# SSH keys (NEVER COMMIT!)
-id_rsa*
+# SSH keys / credentials
 *.pem
 *.key
+id_rsa*
 known_hosts
-
-# Scaleway specific
-.scw/
-scw-cli.ini
+credentials.json
+service-account.json
+scw-key-*.json
