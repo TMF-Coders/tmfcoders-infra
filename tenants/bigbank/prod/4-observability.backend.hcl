@@ -1,7 +1,7 @@
 bucket   = "bigbank-terraform-state-CHANGEME"
 key      = "tenants/bigbank/4-observability/prod/terraform.tfstate"
 region   = "fr-par"
-endpoint = "s3.fr-par.scw.cloud"
+endpoints = { s3 = "https://s3.fr-par.scw.cloud" }
 
 skip_credentials_validation = true
 skip_region_validation      = true

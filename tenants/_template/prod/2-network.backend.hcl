@@ -1,7 +1,7 @@
 bucket   = "__BUCKET__"
 key      = "tenants/__TENANT__/2-network/__ENV__/terraform.tfstate"
 region   = "fr-par"
-endpoint = "s3.fr-par.scw.cloud"
+endpoints = { s3 = "https://s3.fr-par.scw.cloud" }
 
 skip_credentials_validation = true
 skip_region_validation      = true

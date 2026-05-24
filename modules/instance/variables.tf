@@ -87,3 +87,9 @@ variable "cloud_init" {
   type        = string
   default     = ""
 }
+
+variable "admin_ssh_keys" {
+  description = "Public SSH keys appended to root's authorized_keys at first boot"
+  type        = list(string)
+  default     = []
+}

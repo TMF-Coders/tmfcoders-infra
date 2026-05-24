@@ -94,10 +94,7 @@ resource "scaleway_object_bucket" "audit_logs" {
   })
 }
 
-resource "scaleway_object_bucket_acl" "audit_logs" {
-  bucket = scaleway_object_bucket.audit_logs.name
-  acl    = "private"
-}
+# Object buckets are private by default; ACLs are not used.
 
 # COMPLIANCE mode: objects cannot be deleted or overwritten until expiry.
 resource "scaleway_object_bucket_lock_configuration" "audit_logs" {
@@ -114,12 +111,8 @@ resource "scaleway_object_bucket_lock_configuration" "audit_logs" {
 #═══════════════════════════════════════════════════════
 # PILLAR 3: Managed alerting (Cockpit Alert Manager)
 #═══════════════════════════════════════════════════════
-resource "scaleway_cockpit_alert_manager" "main" {
-  project_id            = var.project_id
-  region                = var.region
-  enable_managed_alerts = true
-
-  contact_points {
-    email = var.alert_email
-  }
-}
+# NOTE: Cockpit ships exactly one Alert Manager per project automatically.
+# The scaleway_cockpit_alert_manager resource is intentionally NOT managed
+# here - its update API is currently unstable (HTTP 500). Enable managed
+# alerts and add the email contact point (var.alert_email) in the Scaleway
+# console: Cockpit -> Alerts. Revisit once the provider/API stabilises.

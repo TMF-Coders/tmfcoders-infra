@@ -137,3 +137,15 @@ variable "power_on_cron" {
   type        = string
   default     = "0 8 * * *"
 }
+
+variable "admin_ssh_keys" {
+  description = "Public SSH keys injected into root's authorized_keys on every VM at first boot"
+  type        = list(string)
+  default     = []
+}
+
+variable "odoo_assign_public_ip" {
+  description = "Attach a routed public IP to the Odoo VM (temporary - migration window only)"
+  type        = bool
+  default     = false
+}

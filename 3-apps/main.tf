@@ -28,7 +28,7 @@ data "terraform_remote_state" "org" {
     bucket                      = var.state_bucket
     key                         = "tenants/${var.tenant}/1-org/${var.environment}/terraform.tfstate"
     region                      = var.region
-    endpoint                    = "s3.${var.region}.scw.cloud"
+    endpoints                   = { s3 = "https://s3.${var.region}.scw.cloud" }
     skip_credentials_validation = true
     skip_region_validation      = true
     skip_requesting_account_id  = true
@@ -41,7 +41,7 @@ data "terraform_remote_state" "network" {
     bucket                      = var.state_bucket
     key                         = "tenants/${var.tenant}/2-network/${var.environment}/terraform.tfstate"
     region                      = var.region
-    endpoint                    = "s3.${var.region}.scw.cloud"
+    endpoints                   = { s3 = "https://s3.${var.region}.scw.cloud" }
     skip_credentials_validation = true
     skip_region_validation      = true
     skip_requesting_account_id  = true
@@ -81,7 +81,7 @@ resource "scaleway_rdb_instance" "odoo" {
   user_name = "odoo"
   password  = random_password.odoo_db.result
 
-  volume_type       = "bssd"
+  volume_type       = "sbs_5k"
   volume_size_in_gb = var.rdb_volume_size_gb
 
   disable_backup            = false
@@ -119,6 +119,7 @@ module "openclaw" {
 
   private_network_ids = [data.terraform_remote_state.network.outputs.tmf_network_id]
   assign_public_ip    = false
+  admin_ssh_keys      = var.admin_ssh_keys
 
   cloud_init = file("${path.module}/templates/openclaw-cloud-init.sh.tftpl")
 }
@@ -141,11 +142,12 @@ module "odoo" {
   root_volume_type = "sbs_volume"
 
   private_network_ids = [data.terraform_remote_state.network.outputs.apps_network_id]
-  assign_public_ip    = false
+  assign_public_ip    = var.odoo_assign_public_ip
+  admin_ssh_keys      = var.admin_ssh_keys
 
   cloud_init = templatefile("${path.module}/templates/odoo-cloud-init.sh.tftpl", {
-    db_host                   = scaleway_rdb_instance.odoo.load_balancer[0].ip
-    db_port                   = scaleway_rdb_instance.odoo.load_balancer[0].port
+    db_host                   = scaleway_rdb_instance.odoo.private_network[0].ip
+    db_port                   = scaleway_rdb_instance.odoo.private_network[0].port
     db_name                   = scaleway_rdb_database.odoo.name
     db_user                   = "odoo"
     db_password_secret_id     = scaleway_secret.odoo_db_password.id
@@ -155,19 +157,6 @@ module "odoo" {
     scw_project_id            = var.project_id
     scw_region                = var.region
   })
-}
-
-#───────────────────────────────────────────────
-# Odoo private IP (IPAM) for the Load Balancer backend
-#───────────────────────────────────────────────
-data "scaleway_ipam_ip" "odoo" {
-  count = var.enable_odoo_load_balancer ? 1 : 0
-
-  resource {
-    id   = module.odoo.instance_id
-    type = "instance_server"
-  }
-  type = "ipv4"
 }
 
 #───────────────────────────────────────────────
@@ -201,7 +190,7 @@ resource "scaleway_lb_backend" "odoo" {
   name             = "odoo-http"
   forward_protocol = "http"
   forward_port     = 8069
-  server_ips       = [data.scaleway_ipam_ip.odoo[0].address]
+  server_ips       = [module.odoo.private_ip]
 
   health_check_http {
     uri  = "/web/health"

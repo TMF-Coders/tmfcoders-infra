@@ -49,11 +49,7 @@ resource "scaleway_object_bucket" "state" {
   }
 }
 
-# Block all public access to the state bucket.
-resource "scaleway_object_bucket_acl" "state" {
-  bucket = scaleway_object_bucket.state.name
-  acl    = "private"
-}
+# Object buckets are private by default; ACLs are not used.
 
 #───────────────────────────────────────────────
 # CI/CD IAM application (Organization-wide - deploys every tenant)
@@ -68,22 +64,22 @@ resource "scaleway_iam_policy" "terraform_ci" {
   description    = "Permissions for the Terraform CI pipeline across all tenant projects"
   application_id = scaleway_iam_application.terraform_ci.id
 
+  # Project-scoped permissions, granted org-wide (every tenant project).
   rule {
-    # Org-wide: the pipeline must reach every Project-mode tenant project.
-    organization_id = module.project.organization_id
-    permission_set_names = [
-      "InstancesFullAccess",
-      "PrivateNetworksReadWrite",
-      "VPCFullAccess",
-      "ObjectStorageFullAccess",
-      "SecretManagerFullAccess",
-      "RelationalDatabasesFullAccess",
-      "LoadBalancersFullAccess",
-      "ObservabilityFullAccess",
-      "ProjectManager",
-      "IAMManager",
-    ]
+    organization_id      = module.project.organization_id
+    permission_set_names = ["AllProductsFullAccess"]
   }
+
+  # Organization-scoped permissions: create projects, manage workload IAM.
+  rule {
+    organization_id      = module.project.organization_id
+    permission_set_names = ["ProjectManager", "IAMManager"]
+  }
+}
+
+# API keys must carry an expiry; time_rotating forces yearly rotation.
+resource "time_rotating" "ci_key" {
+  rotation_days = 365
 }
 
 # API key for the CI application. The secret is shown once - store it in the
@@ -92,4 +88,5 @@ resource "scaleway_iam_api_key" "terraform_ci" {
   application_id     = scaleway_iam_application.terraform_ci.id
   description        = "GitHub Actions Terraform CI key"
   default_project_id = module.project.project_id
+  expires_at         = time_rotating.ci_key.rotation_rfc3339
 }

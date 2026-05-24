@@ -1,7 +1,7 @@
 bucket   = "tmfcoders-terraform-state-CHANGEME"
 key      = "tenants/acme/1-org/prod/terraform.tfstate"
 region   = "fr-par"
-endpoint = "s3.fr-par.scw.cloud"
+endpoints = { s3 = "https://s3.fr-par.scw.cloud" }
 
 skip_credentials_validation = true
 skip_region_validation      = true

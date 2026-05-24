@@ -1,5 +1,5 @@
 bucket   = "tmfcoders-terraform-state-a2b56"
-key      = "tenants/tmf-internal/1-org/prod/terraform.tfstate"
+key      = "0-bootstrap/terraform.tfstate"
 region   = "fr-par"
 endpoints = { s3 = "https://s3.fr-par.scw.cloud" }
 

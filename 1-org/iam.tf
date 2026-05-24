@@ -2,7 +2,12 @@
  * IAM - Workload Identities (Scaleway)
  * One IAM application per workload, each with a least-privilege policy.
  * Workloads authenticate with their own API key - never a human user key.
+ * API keys carry an expiry; time_rotating forces yearly rotation.
  */
+
+resource "time_rotating" "workload_keys" {
+  rotation_days = 365
+}
 
 #───────────────────────────────────────────────
 # Odoo workload identity
@@ -20,7 +25,7 @@ resource "scaleway_iam_policy" "odoo" {
   rule {
     project_ids = [var.project_id]
     permission_set_names = [
-      "SecretManagerSecretAccess",
+      "SecretManagerReadOnly",
       "ObservabilityFullAccess",
     ]
   }
@@ -30,6 +35,7 @@ resource "scaleway_iam_api_key" "odoo" {
   application_id     = scaleway_iam_application.odoo.id
   description        = "Odoo workload API key (${var.environment})"
   default_project_id = var.project_id
+  expires_at         = time_rotating.workload_keys.rotation_rfc3339
 }
 
 #───────────────────────────────────────────────
@@ -48,7 +54,7 @@ resource "scaleway_iam_policy" "openclaw" {
   rule {
     project_ids = [var.project_id]
     permission_set_names = [
-      "SecretManagerSecretAccess",
+      "SecretManagerReadOnly",
       "ObservabilityFullAccess",
     ]
   }
@@ -58,6 +64,7 @@ resource "scaleway_iam_api_key" "openclaw" {
   application_id     = scaleway_iam_application.openclaw.id
   description        = "OpenClaw workload API key (${var.environment})"
   default_project_id = var.project_id
+  expires_at         = time_rotating.workload_keys.rotation_rfc3339
 }
 
 #───────────────────────────────────────────────
@@ -83,4 +90,5 @@ resource "scaleway_iam_api_key" "scheduler" {
   application_id     = scaleway_iam_application.scheduler.id
   description        = "Scheduler workload API key (${var.environment})"
   default_project_id = var.project_id
+  expires_at         = time_rotating.workload_keys.rotation_rfc3339
 }

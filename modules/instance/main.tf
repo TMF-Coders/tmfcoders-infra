@@ -5,10 +5,18 @@
  * explicitly requested (production workloads sit behind a Load Balancer).
  */
 
-data "scaleway_marketplace_image" "this" {
-  label         = var.image_label
-  instance_type = var.instance_type
-  zone          = var.zone
+locals {
+  # A custom user_data cloud-init replaces Scaleway's default one, which
+  # injects SSH keys. So we prepend an SSH-key-injection preamble to the
+  # provided bootstrap script (its shebang is stripped and the body appended).
+  ssh_preamble = join("\n", concat(
+    ["#!/bin/bash", "mkdir -p /root/.ssh && chmod 700 /root/.ssh"],
+    [for k in var.admin_ssh_keys : "echo '${k}' >> /root/.ssh/authorized_keys"],
+    ["chmod 600 /root/.ssh/authorized_keys 2>/dev/null || true", ""],
+  ))
+
+  bootstrap_body = var.cloud_init == "" ? "" : replace(var.cloud_init, "/^#![^\n]*\n/", "")
+  user_data_full = "${local.ssh_preamble}\n${local.bootstrap_body}"
 }
 
 resource "scaleway_instance_ip" "this" {
@@ -21,7 +29,7 @@ resource "scaleway_instance_ip" "this" {
 resource "scaleway_instance_server" "this" {
   name              = var.instance_name
   type              = var.instance_type
-  image             = data.scaleway_marketplace_image.this.id
+  image             = var.image_label
   zone              = var.zone
   project_id        = var.project_id
   security_group_id = var.security_group_id
@@ -46,7 +54,7 @@ resource "scaleway_instance_server" "this" {
   }
 
   user_data = {
-    cloud-init = var.cloud_init
+    cloud-init = local.user_data_full
   }
 
   lifecycle {

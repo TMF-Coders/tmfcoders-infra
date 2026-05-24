@@ -36,10 +36,16 @@ resource "scaleway_iam_policy" "client" {
   }
 }
 
+resource "time_rotating" "client_key" {
+  count         = var.create_client_access ? 1 : 0
+  rotation_days = 365
+}
+
 resource "scaleway_iam_api_key" "client" {
   count = var.create_client_access ? 1 : 0
 
   application_id     = scaleway_iam_application.client[0].id
   description        = "Client API key for tenant ${var.tenant}"
   default_project_id = scaleway_account_project.this.id
+  expires_at         = time_rotating.client_key[0].rotation_rfc3339
 }
