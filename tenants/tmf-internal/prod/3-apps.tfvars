@@ -20,7 +20,7 @@ rdb_backup_retention_days = 14
 rdb_volume_size_gb        = 20
 
 enable_odoo_load_balancer = true
-odoo_domain               = ""
+odoo_domain               = "admin.tmfcoders.com"
 
 # VM power schedule (cost saving) - UTC crons; defaults = 01:00-09:00 CET
 enable_power_schedule = true
@@ -32,5 +32,6 @@ admin_ssh_keys = [
   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGhTqQwucVnRn6gO11xM6fR6PqH2hmubcRiHSPR7b4qz rmorgade@MacBook-Pro-de-Ruben.local",
 ]
 
-# TEMPORARY - attach public IP for migration window only.
-odoo_assign_public_ip = true
+# Private-network only; public ingress goes through the Load Balancer.
+odoo_assign_public_ip = false
+admin_root_password   = ""

@@ -149,3 +149,10 @@ variable "odoo_assign_public_ip" {
   type        = bool
   default     = false
 }
+
+variable "admin_root_password" {
+  description = "Optional root password for Scaleway serial console (sensitive, temporary)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

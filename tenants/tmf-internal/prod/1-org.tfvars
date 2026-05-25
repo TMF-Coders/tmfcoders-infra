@@ -9,5 +9,5 @@ zone         = "fr-par-1"
 
 openclaw_api_key = ""
 
-# TEMPORARY - operator IP allowed to SSH the apps VMs (migration window).
-admin_ssh_cidr = "92.176.20.116/32"
+# No admin SSH from the internet - access via Public Gateway bastion only.
+admin_ssh_cidr = ""

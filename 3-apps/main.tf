@@ -102,6 +102,16 @@ resource "scaleway_rdb_database" "odoo" {
   name        = "odoo"
 }
 
+# Grant the Odoo RDB user full privileges on its database.
+# Scaleway RDB does NOT auto-grant the instance user on databases created
+# via the API; without this the connection fails with "permission denied".
+resource "scaleway_rdb_privilege" "odoo" {
+  instance_id   = scaleway_rdb_instance.odoo.id
+  user_name     = "odoo"
+  database_name = scaleway_rdb_database.odoo.name
+  permission    = "all"
+}
+
 #───────────────────────────────────────────────
 # VM 1: OpenClaw (Matriz)
 #───────────────────────────────────────────────
@@ -132,7 +142,7 @@ module "odoo" {
 
   instance_name     = "${local.name_prefix}-odoo-001"
   instance_type     = var.odoo_instance_type
-  image_label       = "ubuntu_jammy"
+  image_label       = "ubuntu_noble" # 24.04 = Python 3.12 (Odoo 19 requires 3.11+)
   zone              = var.zone
   project_id        = var.project_id
   security_group_id = data.terraform_remote_state.org.outputs.security_group_apps_id
@@ -144,18 +154,15 @@ module "odoo" {
   private_network_ids = [data.terraform_remote_state.network.outputs.apps_network_id]
   assign_public_ip    = var.odoo_assign_public_ip
   admin_ssh_keys      = var.admin_ssh_keys
+  admin_root_password = var.admin_root_password
 
   cloud_init = templatefile("${path.module}/templates/odoo-cloud-init.sh.tftpl", {
-    db_host                   = scaleway_rdb_instance.odoo.private_network[0].ip
-    db_port                   = scaleway_rdb_instance.odoo.private_network[0].port
-    db_name                   = scaleway_rdb_database.odoo.name
-    db_user                   = "odoo"
-    db_password_secret_id     = scaleway_secret.odoo_db_password.id
-    master_password_secret_id = data.terraform_remote_state.org.outputs.odoo_master_password_secret_id
-    scw_access_key            = data.terraform_remote_state.org.outputs.odoo_workload_access_key
-    scw_secret_key            = data.terraform_remote_state.org.outputs.odoo_workload_secret_key
-    scw_project_id            = var.project_id
-    scw_region                = var.region
+    db_host         = scaleway_rdb_instance.odoo.private_network[0].ip
+    db_port         = scaleway_rdb_instance.odoo.private_network[0].port
+    db_name         = scaleway_rdb_database.odoo.name
+    db_user         = "odoo"
+    db_password     = random_password.odoo_db.result
+    master_password = data.terraform_remote_state.org.outputs.odoo_master_password
   })
 }
 
@@ -193,8 +200,9 @@ resource "scaleway_lb_backend" "odoo" {
   server_ips       = [module.odoo.private_ip]
 
   health_check_http {
-    uri  = "/web/health"
-    code = 200
+    uri         = "/web/health"
+    code        = 200
+    host_header = "odoo.internal"
   }
 }
 

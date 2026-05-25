@@ -6,17 +6,14 @@
  */
 
 locals {
-  # A custom user_data cloud-init replaces Scaleway's default one, which
-  # injects SSH keys. So we prepend an SSH-key-injection preamble to the
-  # provided bootstrap script (its shebang is stripped and the body appended).
-  ssh_preamble = join("\n", concat(
-    ["#!/bin/bash", "mkdir -p /root/.ssh && chmod 700 /root/.ssh"],
-    [for k in var.admin_ssh_keys : "echo '${k}' >> /root/.ssh/authorized_keys"],
-    ["chmod 600 /root/.ssh/authorized_keys 2>/dev/null || true", ""],
-  ))
-
-  bootstrap_body = var.cloud_init == "" ? "" : replace(var.cloud_init, "/^#![^\n]*\n/", "")
-  user_data_full = "${local.ssh_preamble}\n${local.bootstrap_body}"
+  # Emit user_data as a #cloud-config (YAML) rendered from a template.
+  # This merges with the Scaleway image's default cloud-init (network /
+  # source-routing / sshd setup) instead of replacing it.
+  user_data_full = templatefile("${path.module}/cloud-config.yaml.tftpl", {
+    admin_ssh_keys      = var.admin_ssh_keys
+    admin_root_password = var.admin_root_password
+    bootstrap           = var.cloud_init
+  })
 }
 
 resource "scaleway_instance_ip" "this" {

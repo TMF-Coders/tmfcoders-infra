@@ -93,3 +93,10 @@ variable "admin_ssh_keys" {
   type        = list(string)
   default     = []
 }
+
+variable "admin_root_password" {
+  description = "Optional root password set via cloud-init (for Scaleway serial console). Empty = disabled."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

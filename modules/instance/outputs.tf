@@ -14,8 +14,8 @@ output "private_ips" {
 }
 
 output "private_ip" {
-  description = "First private IP address of the instance (null if none)"
-  value       = try(scaleway_instance_server.this.private_ips[0].address, null)
+  description = "First IPv4 private address of the instance (null if none)"
+  value       = try([for ip in scaleway_instance_server.this.private_ips : ip.address if length(regexall(":", ip.address)) == 0][0], null)
 }
 
 output "public_ip" {
