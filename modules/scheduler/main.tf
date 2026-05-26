@@ -36,13 +36,14 @@ resource "scaleway_function" "power" {
   max_scale    = 1
   memory_limit = 256
 
+  # SCW_* names are reserved by the Functions runtime - use custom names.
   environment_variables = {
-    SCW_ZONE   = var.zone
-    SERVER_IDS = join(",", var.server_ids)
+    TARGET_ZONE = var.zone
+    SERVER_IDS  = join(",", var.server_ids)
   }
 
   secret_environment_variables = {
-    SCW_SECRET_KEY = var.scw_secret_key
+    API_SECRET_KEY = var.scw_secret_key
   }
 }
 

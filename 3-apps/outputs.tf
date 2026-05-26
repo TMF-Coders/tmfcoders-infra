@@ -9,8 +9,8 @@ output "odoo_instance_id" {
 }
 
 output "odoo_db_endpoint" {
-  description = "Managed PostgreSQL endpoint for Odoo"
-  value       = scaleway_rdb_instance.odoo.load_balancer[0].ip
+  description = "Managed PostgreSQL endpoint for Odoo (private network)"
+  value       = "${scaleway_rdb_instance.odoo.private_network[0].ip}:${scaleway_rdb_instance.odoo.private_network[0].port}"
 }
 
 output "odoo_db_name" {

@@ -46,8 +46,8 @@ def handle(event, context):
     if action not in ("poweroff", "poweron"):
         return {"statusCode": 400, "body": f"invalid action: {action}"}
 
-    token = os.environ["SCW_SECRET_KEY"]
-    zone = os.environ["SCW_ZONE"]
+    token = os.environ["API_SECRET_KEY"]
+    zone = os.environ["TARGET_ZONE"]
     server_ids = [s.strip() for s in os.environ.get("SERVER_IDS", "").split(",") if s.strip()]
 
     results = {sid: _action(zone, sid, action, token) for sid in server_ids}

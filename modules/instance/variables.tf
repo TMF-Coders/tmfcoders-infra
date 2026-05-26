@@ -87,3 +87,16 @@ variable "cloud_init" {
   type        = string
   default     = ""
 }
+
+variable "admin_ssh_keys" {
+  description = "Public SSH keys appended to root's authorized_keys at first boot"
+  type        = list(string)
+  default     = []
+}
+
+variable "admin_root_password" {
+  description = "Optional root password set via cloud-init (for Scaleway serial console). Empty = disabled."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

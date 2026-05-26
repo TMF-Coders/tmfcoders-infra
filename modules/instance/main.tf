@@ -5,10 +5,15 @@
  * explicitly requested (production workloads sit behind a Load Balancer).
  */
 
-data "scaleway_marketplace_image" "this" {
-  label         = var.image_label
-  instance_type = var.instance_type
-  zone          = var.zone
+locals {
+  # Emit user_data as a #cloud-config (YAML) rendered from a template.
+  # This merges with the Scaleway image's default cloud-init (network /
+  # source-routing / sshd setup) instead of replacing it.
+  user_data_full = templatefile("${path.module}/cloud-config.yaml.tftpl", {
+    admin_ssh_keys      = var.admin_ssh_keys
+    admin_root_password = var.admin_root_password
+    bootstrap           = var.cloud_init
+  })
 }
 
 resource "scaleway_instance_ip" "this" {
@@ -21,7 +26,7 @@ resource "scaleway_instance_ip" "this" {
 resource "scaleway_instance_server" "this" {
   name              = var.instance_name
   type              = var.instance_type
-  image             = data.scaleway_marketplace_image.this.id
+  image             = var.image_label
   zone              = var.zone
   project_id        = var.project_id
   security_group_id = var.security_group_id
@@ -46,7 +51,7 @@ resource "scaleway_instance_server" "this" {
   }
 
   user_data = {
-    cloud-init = var.cloud_init
+    cloud-init = local.user_data_full
   }
 
   lifecycle {

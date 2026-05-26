@@ -1,0 +1,23 @@
+#cloud-config
+%{ if length(admin_ssh_keys) > 0 ~}
+ssh_authorized_keys:
+%{ for k in admin_ssh_keys ~}
+  - ${k}
+%{ endfor ~}
+%{ endif ~}
+%{ if admin_root_password != "" ~}
+ssh_pwauth: true
+chpasswd:
+  expire: false
+  users:
+    - {name: root, password: '${admin_root_password}', type: text}
+%{ endif ~}
+%{ if bootstrap != "" ~}
+write_files:
+  - path: /opt/bootstrap.sh
+    permissions: '0755'
+    content: |
+      ${indent(6, bootstrap)}
+runcmd:
+  - [bash, /opt/bootstrap.sh]
+%{ endif ~}

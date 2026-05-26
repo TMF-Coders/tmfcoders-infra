@@ -23,6 +23,12 @@ output "odoo_master_password_secret_id" {
   value       = scaleway_secret.odoo_master_password.id
 }
 
+output "odoo_master_password" {
+  description = "Odoo master password value (also stored in Secret Manager)"
+  value       = random_password.odoo_master_password.result
+  sensitive   = true
+}
+
 output "odoo_workload_access_key" {
   description = "Odoo workload API access key"
   value       = scaleway_iam_api_key.odoo.access_key

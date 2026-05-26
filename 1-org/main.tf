@@ -61,7 +61,7 @@ module "security_group_apps" {
   inbound_default_policy  = "drop"
   outbound_default_policy = "accept"
 
-  inbound_rules = [
+  inbound_rules = concat([
     {
       action   = "accept"
       protocol = "TCP"
@@ -80,5 +80,13 @@ module "security_group_apps" {
       port     = 8072 # Odoo longpolling / websocket
       ip_range = local.apps_subnet
     },
-  ]
+    ],
+    # Optional temporary admin SSH from a single CIDR (e.g. operator IP).
+    var.admin_ssh_cidr == "" ? [] : [{
+      action   = "accept"
+      protocol = "TCP"
+      port     = 22
+      ip_range = var.admin_ssh_cidr
+    }]
+  )
 }

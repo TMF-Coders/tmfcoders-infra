@@ -21,7 +21,7 @@ variable "create_client_access" {
 }
 
 variable "client_permission_sets" {
-  description = "Permission sets granted to the client IAM application"
+  description = "Permission sets granted to the client IAM application (must share one scope type)"
   type        = list(string)
-  default     = ["ProjectReadOnly", "BillingReadOnly"]
+  default     = ["AllProductsReadOnly"]
 }

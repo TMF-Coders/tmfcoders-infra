@@ -62,3 +62,9 @@ variable "openclaw_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "admin_ssh_cidr" {
+  description = "Optional CIDR allowed to SSH into the apps tier from the internet (temporary; empty disables)"
+  type        = string
+  default     = ""
+}
