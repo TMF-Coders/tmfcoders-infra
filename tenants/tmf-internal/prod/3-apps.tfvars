@@ -14,7 +14,7 @@ enable_openclaw    = false
 odoo_instance_type = "PRO2-XXS" # 2 vCPU / 8 GB - DB offloaded to RDB; FinOps-optimal
 
 # Managed PostgreSQL: single-node, modest volume, shorter retention (internal).
-rdb_node_type             = "DB-DEV-M"
+rdb_node_type             = "DB-PLAY2-NANO"
 rdb_is_ha                 = false
 rdb_backup_retention_days = 14
 rdb_volume_size_gb        = 20
